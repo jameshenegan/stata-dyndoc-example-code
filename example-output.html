@@ -1,0 +1,114 @@
+<p>We will generate 10,000 random numbers.</p>
+<pre><code>. clear
+
+. local num_obs 10000
+
+. set obs `num_obs'
+number of observations (_N) was 0, now 10,000
+
+</code></pre>
+<p>The first 5,000 will have a y value of 0. The rest will have a y value of 1.</p>
+<pre><code>. gen y = .
+(10,000 missing values generated)
+
+. replace y = 0 if _n &lt;= `num_obs'/2
+(5,000 real changes made)
+
+. replace y = 1 if _n &gt;  `num_obs'/2
+(5,000 real changes made)
+
+</code></pre>
+<p>The first 5,000 will follow a Bernoulli(0.4) distribution. The rest will follow a Bernoulli(0.6) distribution.</p>
+<pre><code>. gen x = .
+(10,000 missing values generated)
+
+. replace x = rbinomial(1, 0.4) if _n &lt;= `num_obs'/2
+(5,000 real changes made)
+
+. replace x = rbinomial(1, 0.6) if _n &gt;  `num_obs'/2
+(5,000 real changes made)
+
+</code></pre>
+<p>Let&rsquo;s check the results.</p>
+<pre><code>. tab y x, row
+
++----------------+
+| Key            |
+|----------------|
+|   frequency    |
+| row percentage |
++----------------+
+
+           |           x
+         y |         0          1 |     Total
+-----------+----------------------+----------
+         0 |     2,987      2,013 |     5,000 
+           |     59.74      40.26 |    100.00 
+-----------+----------------------+----------
+         1 |     1,995      3,005 |     5,000 
+           |     39.90      60.10 |    100.00 
+-----------+----------------------+----------
+     Total |     4,982      5,018 |    10,000 
+           |     49.82      50.18 |    100.00 
+
+</code></pre>
+<p>We run a logistic regression.</p>
+<pre><code>. logistic y x
+
+Logistic regression                             Number of obs     =     10,000
+                                                LR chi2(1)        =     396.25
+                                                Prob &gt; chi2       =     0.0000
+Log likelihood = -6733.3444                     Pseudo R2         =     0.0286
+
+------------------------------------------------------------------------------
+           y | Odds Ratio   Std. Err.      z    P&gt;|z|     [95% Conf. Interval]
+-------------+----------------------------------------------------------------
+           x |    2.23508   .0912172    19.71   0.000     2.063261    2.421207
+       _cons |   .6678942   .0193117   -13.96   0.000     .6310965    .7068375
+------------------------------------------------------------------------------
+Note: _cons estimates baseline odds.
+
+</code></pre>
+<p>We run a margins command over the x values.</p>
+<pre><code>. margins, over(x) post
+
+Predictive margins                              Number of obs     =     10,000
+Model VCE    : OIM
+
+Expression   : Pr(y), predict()
+over         : x
+
+------------------------------------------------------------------------------
+             |            Delta-method
+             |     Margin   Std. Err.      z    P&gt;|z|     [95% Conf. Interval]
+-------------+----------------------------------------------------------------
+           x |
+          0  |   .4004416    .006942    57.68   0.000     .3868356    .4140476
+          1  |   .5988442   .0069191    86.55   0.000      .585283    .6124053
+------------------------------------------------------------------------------
+
+</code></pre>
+<p>We obtain the relative risk ratio.</p>
+<pre><code>. nlcom (risk_ratio: _b[1.x] / _b[0.x])
+
+  risk_ratio:  _b[1.x] / _b[0.x]
+
+------------------------------------------------------------------------------
+             |      Coef.   Std. Err.      z    P&gt;|z|     [95% Conf. Interval]
+-------------+----------------------------------------------------------------
+  risk_ratio |   1.495459   .0311554    48.00   0.000     1.434396    1.556523
+------------------------------------------------------------------------------
+
+</code></pre>
+<p>We obtain the absolute difference.</p>
+<pre><code>. lincom _b[1.x] - _b[0.x]
+
+ ( 1)  - 0bn.x + 1.x = 0
+
+------------------------------------------------------------------------------
+             |      Coef.   Std. Err.      z    P&gt;|z|     [95% Conf. Interval]
+-------------+----------------------------------------------------------------
+         (1) |   .1984026   .0098013    20.24   0.000     .1791925    .2176127
+------------------------------------------------------------------------------
+
+</code></pre>
